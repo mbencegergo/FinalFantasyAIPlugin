@@ -24,8 +24,10 @@ public static class QuestManagerService
 
     public static List<QuestInfo> questInfos = new();
     public static event Action<List<QuestInfo>>? OnQuestsUpdated;
-    public static event Action<uint>? OnQuestAdded;
-    public static event Action<uint>? OnQuestRemoved;
+    public static event Action<QuestInfo>? OnQuestAdded;
+    public static event Action<QuestInfo>? OnQuestRemoved;
+
+    private static bool questsInitialized = false;
 
     public static void UpdateActiveQuests(TimeSpan deltaTime, IDataManager dataManager, IDalamudPluginInterface pluginInterface, bool forced = false)
     {
@@ -45,8 +47,10 @@ public static class QuestManagerService
         {
             if (!currentQuestIds.Contains(oldQuestId))
             {
+                var oldQuestInfo = questInfos.FirstOrDefault(x => x.Id == oldQuestId);
                 activeQuests.Remove(oldQuestId);
-                OnQuestRemoved?.Invoke(oldQuestId);
+                if(oldQuestInfo != null && questsInitialized)
+                    OnQuestRemoved?.Invoke(oldQuestInfo);
                 changed = true;
             }
         }
@@ -56,7 +60,11 @@ public static class QuestManagerService
         {
             if (activeQuests.Add(newQuestId))
             {
-                OnQuestAdded?.Invoke(newQuestId);
+                questInfos = QuestDataDumper.DumpActiveQuestData(dataManager, pluginInterface, activeQuests);
+                var newQuestInfo = questInfos.FirstOrDefault(x => x.Id == newQuestId);
+                if (newQuestInfo != null && questsInitialized)
+                    OnQuestAdded?.Invoke(newQuestInfo);
+
                 changed = true;
             }
         }
@@ -67,26 +75,8 @@ public static class QuestManagerService
             Save();
             OnQuestsUpdated?.Invoke(questInfos);
         }
-    }
 
-    public static void AddQuest(uint questId)
-    {
-        if (activeQuests.Add(questId))
-        {
-            Save();
-            OnQuestAdded?.Invoke(questId);
-            OnQuestsUpdated?.Invoke(questInfos);
-        }
-    }
-
-    public static void RemoveQuest(uint questId)
-    {
-        if (activeQuests.Remove(questId))
-        {
-            Save();
-            OnQuestRemoved?.Invoke(questId);
-            OnQuestsUpdated?.Invoke(questInfos);
-        }
+        questsInitialized = true;
     }
 
     public static void Load()

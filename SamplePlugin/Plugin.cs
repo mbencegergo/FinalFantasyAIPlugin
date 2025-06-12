@@ -30,6 +30,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
 
     private const string CommandName = "/ai";
 
@@ -67,7 +69,6 @@ public sealed class Plugin : IDalamudPlugin
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-        Framework.Update += OnFrameworkUpdate;
 
         // Add a simple message to the log with level set to information
         // Use /xllog to open the log window in-game
@@ -81,8 +82,12 @@ public sealed class Plugin : IDalamudPlugin
         QuestDataDumper.InitializeQuestCache(DataManager, PluginInterface);
         QuestManagerService.Load();
         QuestManagerService.OnQuestsUpdated += OnQuestUpdated;
+        QuestManagerService.OnQuestAdded += OnQuestAdded;
+        QuestManagerService.OnQuestRemoved += OnQuestRemoved;
 
         _ = AIIntegrationManager.SendEventAsync("quests",JsonSerializer.Serialize(QuestManagerService.questInfos));
+
+        Framework.Update += OnFrameworkUpdate;
     }
 
     private void OnQuestUpdated(List<QuestInfo> collection)
@@ -92,6 +97,16 @@ public sealed class Plugin : IDalamudPlugin
         {
             ChatGui.Print(item.Id + ":" + item.Sequence[0]);
         }
+    }
+
+    private void OnQuestAdded(QuestInfo quest)
+    {
+        _ = AIIntegrationManager.SendEventAsync("quest_added", JsonSerializer.Serialize(quest));
+    }
+
+    private void OnQuestRemoved(QuestInfo quest)
+    {
+        _ = AIIntegrationManager.SendEventAsync("quest_completed", JsonSerializer.Serialize(quest));
     }
 
     public unsafe void PlayEmote(ushort emoteId)
