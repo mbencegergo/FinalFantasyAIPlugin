@@ -14,6 +14,8 @@ public static class QuestManagerService
 {
     private static readonly string SaveFilePath = Path.Combine(
         Plugin.PluginInterface.ConfigDirectory.FullName, "active_quests.json");
+    private static readonly string SaveDataPath = Path.Combine(
+        Plugin.PluginInterface.ConfigDirectory.FullName, "active_quests_data.json");
 
     private static readonly HashSet<uint> activeQuests = new();
 
@@ -40,38 +42,40 @@ public static class QuestManagerService
 
         var currentQuestIds = QuestMemoryReader.GetActiveQuestIds().ToHashSet();
 
+        if (activeQuests.SetEquals(currentQuestIds))
+            return;
+
         bool changed = false;
 
-        // Detect removed quests
-        foreach (var oldQuestId in activeQuests.ToArray())
+        var removedQuests = activeQuests.Except(currentQuestIds).ToList();
+        var addedQuests = currentQuestIds.Except(activeQuests).ToList();
+
+        foreach (var oldQuestId in removedQuests)
         {
-            if (!currentQuestIds.Contains(oldQuestId))
-            {
-                var oldQuestInfo = questInfos.FirstOrDefault(x => x.Id == oldQuestId);
-                activeQuests.Remove(oldQuestId);
-                if(oldQuestInfo != null && questsInitialized)
-                    OnQuestRemoved?.Invoke(oldQuestInfo);
-                changed = true;
-            }
+            var oldQuestInfo = questInfos.FirstOrDefault(x => x.Id == oldQuestId);
+            activeQuests.Remove(oldQuestId);
+            if (oldQuestInfo != null && questsInitialized)
+                OnQuestRemoved?.Invoke(oldQuestInfo);
+            changed = true;
         }
 
-        // Detect added quests
-        foreach (var newQuestId in currentQuestIds)
+        foreach (var newQuestId in addedQuests)
         {
-            if (activeQuests.Add(newQuestId))
-            {
-                questInfos = QuestDataDumper.DumpActiveQuestData(dataManager, pluginInterface, activeQuests);
-                var newQuestInfo = questInfos.FirstOrDefault(x => x.Id == newQuestId);
-                if (newQuestInfo != null && questsInitialized)
-                    OnQuestAdded?.Invoke(newQuestInfo);
-
-                changed = true;
-            }
+            activeQuests.Add(newQuestId);
+            changed = true;
         }
 
         if (changed)
         {
             questInfos = QuestDataDumper.DumpActiveQuestData(dataManager, pluginInterface, activeQuests);
+
+            foreach (var newQuestId in addedQuests)
+            {
+                var newQuestInfo = questInfos.FirstOrDefault(x => x.Id == newQuestId);
+                if (newQuestInfo != null && questsInitialized)
+                    OnQuestAdded?.Invoke(newQuestInfo);
+            }
+
             Save();
             OnQuestsUpdated?.Invoke(questInfos);
         }
@@ -111,13 +115,12 @@ public static class QuestManagerService
 
     private static bool TryLoadQuestInfos()
     {
-        var path = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "active_quests_data.json");
-        if (!File.Exists(path))
+        if (!File.Exists(SaveDataPath))
             return false;
 
         try
         {
-            var json = File.ReadAllText(path);
+            var json = File.ReadAllText(SaveDataPath);
             var infos = JsonSerializer.Deserialize<List<QuestInfo>>(json);
             if (infos != null)
             {
@@ -141,9 +144,8 @@ public static class QuestManagerService
             var json = JsonSerializer.Serialize(activeQuests);
             File.WriteAllText(SaveFilePath, json);
 
-            var path = Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "active_quests_data.json");
-            File.WriteAllText(path, JsonSerializer.Serialize(questInfos, new JsonSerializerOptions { WriteIndented = true }));
-            Plugin.Log.Information($"Active quest data exported to: {path}");
+            File.WriteAllText(SaveDataPath, JsonSerializer.Serialize(questInfos, new JsonSerializerOptions { WriteIndented = true }));
+            Plugin.Log.Information($"Active quest data exported to: {SaveDataPath}");
         }
         catch (Exception ex)
         {
