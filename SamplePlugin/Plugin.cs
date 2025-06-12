@@ -139,7 +139,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         WindowSystem.Draw();
 
-        ChatBubbleManager.DrawBubble(ClientState, GameGui);
+        ChatBubbleManager.DrawBubble(ClientState, GameGui, ChatGui);
     }
 
     public void ToggleConfigUI() => ConfigWindow.Toggle();

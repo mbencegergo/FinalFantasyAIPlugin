@@ -10,7 +10,7 @@ namespace SamplePlugin
     {
         private static readonly HttpClient _httpClient = new();
         private static TimeSpan _elapsed = TimeSpan.Zero;
-        private static readonly TimeSpan _sendInterval = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan _sendInterval = TimeSpan.FromSeconds(1);
 
         public static void Update(TimeSpan delta)
         {

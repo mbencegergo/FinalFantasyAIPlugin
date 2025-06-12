@@ -1,7 +1,9 @@
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs;
 using ImGuiNET;
 using System;
 using System.Numerics;
+using System.Text;
 
 namespace SamplePlugin;
 
@@ -9,24 +11,33 @@ public static class ChatBubbleManager
 {
     private static string? chatBubbleMessage;
     private static DateTime expirationTime;
+    private static bool log;
 
-    public static void Bubble(string message)
+    public static void Bubble(string message, bool log = true)
     {
-        chatBubbleMessage = message;
-        var duration = message.Length * 0.1008f; // ≈0.1 s per char
+        chatBubbleMessage = WrapText(message, 45); // wrap to 30 characters per line
+        var duration = message.Length * 0.0504f; // ≈0.1 s per char
         expirationTime = DateTime.UtcNow.AddSeconds(duration);
+        ChatBubbleManager.log = log;
     }
 
-    public static void Bubble(string message, float timeInSeconds)
+    public static void Bubble(string message, float timeInSeconds, bool log = true)
     {
-        chatBubbleMessage = message;
+        chatBubbleMessage = WrapText(message, 45); // wrap to 30 characters per line
         expirationTime = DateTime.UtcNow.AddSeconds(timeInSeconds);
+        ChatBubbleManager.log = log;
     }
 
-    public static void DrawBubble(IClientState clientState, IGameGui gameGui)
+    public static void DrawBubble(IClientState clientState, IGameGui gameGui, IChatGui chatGui)
     {
         if (string.IsNullOrEmpty(chatBubbleMessage) || DateTime.UtcNow > expirationTime)
             return;
+
+        if (log)
+        {
+            log = false;
+            chatGui.Print("AI: " + chatBubbleMessage);
+        }
 
         var player = clientState.LocalPlayer;
         if (player == null)
@@ -40,11 +51,32 @@ public static class ChatBubbleManager
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 8);
         ImGui.PushStyleColor(ImGuiCol.TextDisabled, new Vector4(0, 0, 0, 0.6f));
         ImGui.Begin("##ChatBubble", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.AlwaysAutoResize |
-                                    ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav |
-                                    ImGuiWindowFlags.NoInputs);
+                                        ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav |
+                                        ImGuiWindowFlags.NoInputs);
         ImGui.TextUnformatted(chatBubbleMessage);
         ImGui.End();
         ImGui.PopStyleColor();
         ImGui.PopStyleVar();
+    }
+
+    private static string WrapText(string text, int maxCharsPerLine)
+    {
+        var words = text.Split(' ');
+        var sb = new StringBuilder();
+        var line = "";
+        foreach (var w in words)
+        {
+            if ((line + w).Length > maxCharsPerLine)
+            {
+                sb.AppendLine(line.TrimEnd());
+                line = w + " ";
+            }
+            else
+            {
+                line += w + " ";
+            }
+        }
+        if (line.Length > 0) sb.Append(line.TrimEnd());
+        return sb.ToString();
     }
 }
