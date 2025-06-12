@@ -1,4 +1,6 @@
-﻿using Dalamud.Configuration;
+using Dalamud.Configuration;
+using Dalamud.Game;
+using Dalamud.Hooking;
 using Dalamud.Plugin;
 using System;
 
