@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace SamplePlugin
+namespace FinalFantasyAIPlugin
 {
     public static class AIIntegrationManager
     {

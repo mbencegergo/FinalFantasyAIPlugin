@@ -4,7 +4,7 @@ using Dalamud.Hooking;
 using Dalamud.Plugin;
 using System;
 
-namespace SamplePlugin;
+namespace FinalFantasyAIPlugin;
 
 [Serializable]
 public class Configuration : IPluginConfiguration

@@ -8,7 +8,7 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
-namespace SamplePlugin;
+namespace FinalFantasyAIPlugin;
 
 public static class QuestManagerService
 {

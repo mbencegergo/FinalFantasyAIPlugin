@@ -5,7 +5,7 @@ using System;
 using System.Numerics;
 using System.Text;
 
-namespace SamplePlugin;
+namespace FinalFantasyAIPlugin;
 
 public static class ChatBubbleManager
 {
