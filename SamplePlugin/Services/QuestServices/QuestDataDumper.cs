@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-namespace FinalFantasyAIPlugin;
+namespace FinalFantasyAIPlugin.Services.QuestServices;
 
 public static class QuestDataDumper
 {

@@ -56,8 +56,11 @@ namespace FinalFantasyAIPlugin
                     var content = await response.Content.ReadAsStringAsync();
                     if (!string.IsNullOrWhiteSpace(content))
                     {
-                        Plugin.Log.Information("AI says: " + content);
-                        ChatBubbleManager.Bubble(content);
+                        if (Plugin.ClientState.IsLoggedIn)
+                        {
+                            Plugin.Log.Information("AI says: " + content);
+                            ChatBubbleManager.Bubble(content);
+                        }
                     }
                 }
             }

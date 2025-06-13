@@ -8,9 +8,9 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
 
-namespace FinalFantasyAIPlugin;
+namespace FinalFantasyAIPlugin.Services.QuestServices;
 
-public static class QuestManagerService
+public static class QuestService
 {
     private static readonly string SaveFilePath = Path.Combine(
         Plugin.PluginInterface.ConfigDirectory.FullName, "active_quests.json");
@@ -31,8 +31,17 @@ public static class QuestManagerService
 
     private static bool questsInitialized = false;
 
+    public static void Initialize()
+    {
+        TryLoadIds();
+        TryLoadQuestInfos();
+    }
+
     public static void UpdateActiveQuests(TimeSpan deltaTime, IDataManager dataManager, IDalamudPluginInterface pluginInterface, bool forced = false)
     {
+        if (!Plugin.ClientState.IsLoggedIn)
+            return;
+
         timeSinceLastUpdate += deltaTime;
 
         if (!forced && timeSinceLastUpdate < updateInterval)
@@ -45,7 +54,7 @@ public static class QuestManagerService
         if (activeQuests.SetEquals(currentQuestIds))
             return;
 
-        bool changed = false;
+        var changed = false;
 
         var removedQuests = activeQuests.Except(currentQuestIds).ToList();
         var addedQuests = currentQuestIds.Except(activeQuests).ToList();
@@ -83,11 +92,6 @@ public static class QuestManagerService
         questsInitialized = true;
     }
 
-    public static void Load()
-    {
-        TryLoadIds();
-        TryLoadQuestInfos();
-    }
 
     private static bool TryLoadIds()
     {

@@ -1,5 +1,4 @@
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs;
 using ImGuiNET;
 using System;
 using System.Numerics;
@@ -30,6 +29,9 @@ public static class ChatBubbleManager
 
     public static void DrawBubble(IClientState clientState, IGameGui gameGui, IChatGui chatGui)
     {
+        if (!clientState.IsLoggedIn)
+            return;
+
         if (string.IsNullOrEmpty(chatBubbleMessage) || DateTime.UtcNow > expirationTime)
             return;
 

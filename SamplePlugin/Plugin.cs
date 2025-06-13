@@ -14,9 +14,9 @@ using System;
 using System.Collections.Generic;
 using Dalamud.Game;
 using Dalamud.Hooking;
-using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using System.Text.Json;
+using FinalFantasyAIPlugin.Services.QuestServices;
+using FinalFantasyAIPlugin.Services.PlayerService;
 
 namespace FinalFantasyAIPlugin;
 
@@ -32,6 +32,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
+    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+    [PluginService] internal static IDutyState dutyState { get; private set; } = null!;
 
     private const string CommandName = "/ai";
 
@@ -40,7 +42,6 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("FinalFantasyAIPlugin");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
-    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
     public Plugin()
     {
@@ -75,28 +76,17 @@ public sealed class Plugin : IDalamudPlugin
         // Example Output: 00:57:54.959 | INF | [SamplePlugin] ===A cool log message from Sample Plugin===
         Log.Information($"Final Fantasy AI plugin is running...");
 
-        // 🟢 This sends a chat message when the plugin loadsó
+        // 🟢 This sends a chat message when the plugin loads
         //PlayEmote(1);
-        ChatBubbleManager.Bubble("I am alive!! <3");
 
         QuestDataDumper.InitializeQuestCache(DataManager, PluginInterface);
-        QuestManagerService.Load();
-        QuestManagerService.OnQuestsUpdated += OnQuestUpdated;
-        QuestManagerService.OnQuestAdded += OnQuestAdded;
-        QuestManagerService.OnQuestRemoved += OnQuestRemoved;
+        QuestService.Initialize();
+        QuestService.OnQuestAdded += OnQuestAdded;
+        QuestService.OnQuestRemoved += OnQuestRemoved;
 
-        _ = AIIntegrationManager.SendEventAsync("quests",JsonSerializer.Serialize(QuestManagerService.questInfos));
+        _ = AIIntegrationManager.SendEventAsync("quests",JsonSerializer.Serialize(QuestService.questInfos));
 
         Framework.Update += OnFrameworkUpdate;
-    }
-
-    private void OnQuestUpdated(List<QuestInfo> collection)
-    {
-        ChatGui.Print("Quests updated:" + collection.Count);
-        foreach (var item in collection)
-        {
-            ChatGui.Print(item.Id + ":" + item.Sequence[0]);
-        }
     }
 
     private void OnQuestAdded(QuestInfo quest)
@@ -140,8 +130,9 @@ public sealed class Plugin : IDalamudPlugin
     }
     private void OnFrameworkUpdate(IFramework framework)
     {
-        QuestManagerService.UpdateActiveQuests(framework.UpdateDelta, DataManager, PluginInterface); 
+        QuestService.UpdateActiveQuests(framework.UpdateDelta, DataManager, PluginInterface); 
         AIIntegrationManager.Update(framework.UpdateDelta);
+        PlayerService.Update();
     }
 
     private void OnCommand(string command, string args)
