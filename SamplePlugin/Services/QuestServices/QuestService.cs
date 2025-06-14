@@ -42,12 +42,8 @@ public static class QuestService
         if (!Plugin.ClientState.IsLoggedIn)
             return;
 
-        timeSinceLastUpdate += deltaTime;
-
-        if (!forced && timeSinceLastUpdate < updateInterval)
+        if (!UpdateIntervalReady(deltaTime, forced))
             return;
-
-        timeSinceLastUpdate = TimeSpan.Zero;
 
         var currentQuestIds = QuestMemoryReader.GetActiveQuestIds().ToHashSet();
 
@@ -92,6 +88,16 @@ public static class QuestService
         questsInitialized = true;
     }
 
+    private static bool UpdateIntervalReady(TimeSpan deltaTime, bool forced = false)
+    {
+        timeSinceLastUpdate += deltaTime;
+
+        if (!forced && timeSinceLastUpdate < updateInterval)
+            return false;
+
+        timeSinceLastUpdate = TimeSpan.Zero;
+        return true;
+    }
 
     private static bool TryLoadIds()
     {

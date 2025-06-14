@@ -17,6 +17,7 @@ using Dalamud.Hooking;
 using System.Text.Json;
 using FinalFantasyAIPlugin.Services.QuestServices;
 using FinalFantasyAIPlugin.Services.PlayerService;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
 namespace FinalFantasyAIPlugin;
 
@@ -33,7 +34,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
-    [PluginService] internal static IDutyState dutyState { get; private set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
 
     private const string CommandName = "/ai";
 
@@ -84,9 +85,32 @@ public sealed class Plugin : IDalamudPlugin
         QuestService.OnQuestAdded += OnQuestAdded;
         QuestService.OnQuestRemoved += OnQuestRemoved;
 
-        _ = AIIntegrationManager.SendEventAsync("quests",JsonSerializer.Serialize(QuestService.questInfos));
+        _ = AIIntegrationManager.SendEventAsync("quests", JsonSerializer.Serialize(QuestService.questInfos));
+
+        PlayerService.OnPlayerInfoUpdated += InitializePlayerInfo;
 
         Framework.Update += OnFrameworkUpdate;
+    }
+
+    private void InitializePlayerInfo(PlayerInfo playerInfo)
+    {
+        SendPlayerInfo("player_info", playerInfo);
+        PlayerService.OnPlayerInfoUpdated -= InitializePlayerInfo;
+
+        playerInfo.OnNameChanged += _ => SendPlayerInfo("player_name", playerInfo);
+        playerInfo.OnLevelChanged += _ => SendPlayerInfo("player_level", playerInfo);
+        playerInfo.OnClassJobChanged += _ => SendPlayerInfo("player_class_job", playerInfo);
+        playerInfo.OnRegionChanged += _ => SendPlayerInfo("player_region", playerInfo);
+        playerInfo.OnZoneChanged += _ => SendPlayerInfo("player_zone", playerInfo);
+        playerInfo.OnPlaceZoneChanged += _ => SendPlayerInfo("player_place_zone", playerInfo);
+        playerInfo.OnPlaceChanged += _ => SendPlayerInfo("player_place", playerInfo);
+        playerInfo.OnSubPlaceChanged += _ => SendPlayerInfo("player_sub_place", playerInfo);
+        playerInfo.OnWeatherChanged += _ => SendPlayerInfo("player_weather", playerInfo);
+    }
+
+    private void SendPlayerInfo(string eventName, PlayerInfo info)
+    {
+        _ = AIIntegrationManager.SendEventAsync(eventName, JsonSerializer.Serialize(info));
     }
 
     private void OnQuestAdded(QuestInfo quest)
